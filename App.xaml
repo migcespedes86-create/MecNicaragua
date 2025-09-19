@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Application xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             x:Class="MecNicaMauiLogin.App">
+    <Application.Resources>
+        <ResourceDictionary>
+            <Style TargetType="ActivityIndicator">
+                <Setter Property="Color" Value="#0941A3"/>
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
