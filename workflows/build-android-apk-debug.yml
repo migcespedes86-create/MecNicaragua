@@ -1,0 +1,39 @@
+name: Build MAUI Android APK (Debug)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui
+
+      - name: Restore
+        run: dotnet restore MecNicaMauiLogin.csproj
+
+      - name: Build Debug APK
+        run: dotnet build MecNicaMauiLogin.csproj -f net8.0-android -c Debug -p:AndroidPackageFormat=apk
+
+      - name: Find APK
+        id: findapk
+        shell: pwsh
+        run: |
+          $apk = Get-ChildItem -Recurse -Filter *.apk | Where-Object { $_.FullName -match "bin\\Debug\\net8.0-android" } | Select-Object -First 1
+          if (-not $apk) { throw "APK not found" }
+          echo "apk=$($apk.FullName)" >> $env:GITHUB_OUTPUT
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MecNicaMauiLogin-Debug-APK
+          path: ${{ steps.findapk.outputs.apk }}
