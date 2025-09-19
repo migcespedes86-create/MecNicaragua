@@ -1,0 +1,54 @@
+name: Build MAUI Android APK (Release Signed)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui
+
+      - name: Restore
+        run: dotnet restore MecNicaMauiLogin.csproj
+
+      - name: Decode Keystore
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        shell: pwsh
+        run: |
+          $bytes = [Convert]::FromBase64String("${{ secrets.KEYSTORE_BASE64 }}")
+          [IO.File]::WriteAllBytes("maui-keystore.jks", $bytes)
+
+      - name: Build Release APK (signed)
+        run: >
+          dotnet build MecNicaMauiLogin.csproj
+          -f net8.0-android -c Release
+          -p:AndroidPackageFormat=apk
+          -p:AndroidKeyStore=true
+          -p:AndroidSigningKeyStore=maui-keystore.jks
+          -p:AndroidSigningKeyAlias=${{ secrets.KEY_ALIAS }}
+          -p:AndroidSigningKeyPass=${{ secrets.KEY_PASSWORD }}
+          -p:AndroidSigningStorePass=${{ secrets.KEYSTORE_PASSWORD }}
+
+      - name: Find APK
+        id: findapk
+        shell: pwsh
+        run: |
+          $apk = Get-ChildItem -Recurse -Filter *.apk | Where-Object { $_.FullName -match "bin\\Release\\net8.0-android" } | Select-Object -First 1
+          if (-not $apk) { throw "APK not found" }
+          echo "apk=$($apk.FullName)" >> $env:GITHUB_OUTPUT
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MecNicaMauiLogin-Release-APK
+          path: ${{ steps.findapk.outputs.apk }}
